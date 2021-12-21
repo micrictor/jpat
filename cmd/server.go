@@ -61,26 +61,27 @@ func serverMain(cmd *cobra.Command) {
 
 	defer conn.Close()
 
-	buffer := make([]byte, 1024*8) // Max JWT size is 8KB
-
-	go func() {
-		for {
-			_, addr, err := conn.ReadFromUDP(buffer)
-			if err != nil {
-				log.Println(err)
-			}
-			log.Printf("Recieved request from %s", addr.String())
-
-			// Send the reply back before applying firewall policies
-			replyChan := make(chan (error))
-			sendReply(udpNetwork, addr, replyChan)
-
-			replyErr := <-replyChan
-			if replyErr != nil {
-				log.Printf("Error sending reply: %s", replyErr.Error())
-			}
+	for {
+		buffer := make([]byte, 1024*8) // Max JWT size is 8KB
+		_, addr, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			log.Println(err)
 		}
-	}()
+		log.Printf("Recieved request from %s", addr.String())
+
+		processPacket(udpNetwork, addr, buffer)
+	}
+}
+
+func processPacket(udpNet string, addr *net.UDPAddr, buffer []byte) {
+	// Send the reply back before applying firewall policies
+	replyChan := make(chan (error))
+	sendReply(udpNet, addr, replyChan)
+
+	replyErr := <-replyChan
+	if replyErr != nil {
+		log.Printf("Error sending reply: %s", replyErr.Error())
+	}
 }
 
 func sendReply(udpNet string, addr *net.UDPAddr, doneChan chan (error)) {

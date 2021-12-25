@@ -1,0 +1,18 @@
+syntax = "proto3";
+package jpat;
+
+option go_package = "github.com/micrictor/jpat";
+
+
+service Jpat {
+    rpc RequestAuthorization (AuthRequest) returns (AuthReply);
+}
+
+message AuthRequest {
+    string token = 1;
+}
+
+message AuthReply {
+    string socket = 1;
+    int64 expiration = 2;
+}

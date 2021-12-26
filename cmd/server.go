@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/micrictor/jpat/internal/config"
+	"github.com/micrictor/jpat/internal/rules"
+	"github.com/micrictor/jpat/internal/token"
 	pb "github.com/micrictor/jpat/pkg/jpat"
 )
 
@@ -74,11 +76,21 @@ func serverMain(cmd *cobra.Command) {
 }
 
 func processPacket(addr *net.UDPAddr, buffer []byte, appConfig *config.AppConfig) {
-
 	var authRequest pb.AuthRequest
 	err := proto.Unmarshal(buffer, &authRequest)
 	if err != nil {
 		log.Printf("Error unmarshaling input: %s", err.Error())
+		return
+	}
+
+	inputToken, err := token.ProcessToken(authRequest.Token, appConfig)
+	if err != nil {
+		log.Printf("token processing failed: %v", err)
+		return
+	}
+	matchedRule, err := rules.GetRule(addr, inputToken, appConfig)
+	if err != nil {
+		log.Printf("rule matching failed: %v", err)
 		return
 	}
 
@@ -89,7 +101,7 @@ func processPacket(addr *net.UDPAddr, buffer []byte, appConfig *config.AppConfig
 	sb.WriteString(fmt.Sprintf("%d", appConfig.Service.Port))
 	reply := pb.AuthReply{
 		Socket:     sb.String(),
-		Expiration: 1234,
+		Expiration: int64(matchedRule.Expiration),
 	}
 	replyChan := make(chan (error))
 	go sendReply(reply, addr, replyChan)

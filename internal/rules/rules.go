@@ -60,7 +60,7 @@ func GetRule(sourceAddr *net.UDPAddr, token *jwt.Token, appConfig *config.AppCon
 			Port: uint16(sourceAddr.Port),
 		},
 		Destination: Socket{
-			IP:   net.IP(service.Host),
+			IP:   net.ParseIP(service.Host),
 			Port: service.Port,
 		},
 		Expiration: expiration,
@@ -74,26 +74,32 @@ func Close() {
 	}
 }
 
-func ApplyRule(rule Rule) bool {
-	ruleSpec := convertRule(rule)
+func ApplyRule(rule Rule) error {
 	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
-		log.Printf("failed to open iptables: %v", err)
-		return false
+		return fmt.Errorf("failed to open iptables: %v", err)
 	}
 
-	ipt.AppendUnique(DEFAULT_TABLE, DEFAULT_CHAIN, ruleSpec)
+	log.Printf("%v", rule.Destination)
+	ruleSpec := convertRule(rule)
+	err = ipt.AppendUnique(DEFAULT_TABLE, DEFAULT_CHAIN, ruleSpec...)
+	if err != nil {
+		return fmt.Errorf("failed to add rule: %v", err)
+	}
 	activeRules = append(activeRules, rule)
-	return true
+	return nil
 }
 
 // Convert internal rule struct into the proper rule spec for IPTables
-func convertRule(rule Rule) string {
-	return fmt.Sprintf(
-		"--protocol %s --src %s --dst %s --dports %d",
+func convertRule(rule Rule) []string {
+	return []string{
+		"--protocol",
 		DEFAULT_PROTOCOL,
+		"--source",
 		rule.Source.IP.String(),
+		"--destination",
 		rule.Destination.IP.String(),
-		rule.Destination.Port,
-	)
+		"--dport",
+		fmt.Sprintf("%d", rule.Destination.Port),
+	}
 }

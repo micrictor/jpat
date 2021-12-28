@@ -106,6 +106,11 @@ func processPacket(addr *net.UDPAddr, buffer []byte, appConfig *config.AppConfig
 	replyChan := make(chan (error))
 	go sendReply(reply, addr, replyChan)
 
+	if err := rules.ApplyRule(matchedRule); err != nil {
+		log.Printf("Error applying rule: %v", err)
+		return
+	}
+
 	replyErr := <-replyChan
 	if replyErr != nil {
 		log.Printf("Error sending reply: %s", replyErr.Error())

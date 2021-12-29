@@ -96,6 +96,7 @@ func ApplyRule(rule Rule) error {
 		return fmt.Errorf("failed to add rule: %v", err)
 	}
 	activeRules = append(activeRules, rule)
+	go scheduleRuleDeletion(rule)
 	return nil
 }
 
@@ -110,5 +111,27 @@ func convertRule(rule Rule) []string {
 		rule.Destination.IP.String(),
 		"--dport",
 		fmt.Sprintf("%d", rule.Destination.Port),
+	}
+}
+
+// This is ran as a goroutine, sleeping for the time delta between the current time and the
+// expiration time before deleting the rule from the IPTable.
+// This won't scale up well - having N goroutines for N active rules is a lot of overhead.
+// Would likely best be some sort of async worker, either a goroutine or a dedicated thread,
+// with a shared context of the list of active rules to check for expiration at a desired
+// resolution - once every 30 seconds, once per minute, etc
+func scheduleRuleDeletion(rule Rule) {
+	timeDelay := rule.Expiration - uint64(time.Now().Unix())
+	time.Sleep(time.Duration(timeDelay * 10e8))
+	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+	if err != nil {
+		log.Panicf("failed to open iptables for close: %v", err)
+	}
+	log.Printf("Deleting rule %v as it has expired.", rule)
+
+	ruleSpec := convertRule(rule)
+	err = ipt.DeleteIfExists(DEFAULT_TABLE, DEFAULT_CHAIN, ruleSpec...)
+	if err != nil {
+		log.Printf("failed to delete rule: %v", err)
 	}
 }

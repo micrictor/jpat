@@ -68,9 +68,18 @@ func GetRule(sourceAddr *net.UDPAddr, token *jwt.Token, appConfig *config.AppCon
 }
 
 func Close() {
-	for i, r := range activeRules {
-		// Remove all active rules before exiting
-		fmt.Printf("r[%d]: %v\n", i, r)
+	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+	if err != nil {
+		log.Panicf("failed to open iptables for close: %v", err)
+	}
+	log.Printf("Cleaning up %d exisiting IPTables rules", len(activeRules))
+
+	for _, r := range activeRules {
+		ruleSpec := convertRule(r)
+		err = ipt.DeleteIfExists(DEFAULT_TABLE, DEFAULT_CHAIN, ruleSpec...)
+		if err != nil {
+			log.Printf("failed to delete rule: %v", err)
+		}
 	}
 }
 

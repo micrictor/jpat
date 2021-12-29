@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -62,6 +63,14 @@ func serverMain(cmd *cobra.Command) {
 	log.Printf("Listening on %s", conn.LocalAddr().String())
 
 	defer conn.Close()
+	defer rules.Close()
+	interruptChannel := make(chan os.Signal)
+	signal.Notify(interruptChannel, os.Interrupt)
+	go func() {
+		<-interruptChannel
+		rules.Close()
+		os.Exit(1)
+	}()
 
 	for {
 		buffer := make([]byte, 1024*8) // Max JWT size is 8KB

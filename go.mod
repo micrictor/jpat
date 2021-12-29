@@ -2,6 +2,8 @@ module github.com/micrictor/jpat
 
 go 1.17
 
+replace inet.af/wf => github.com/inetaf/wf v0.0.0-20211204062712-86aaea0a7310
+
 require (
 	github.com/golang/protobuf v1.5.2
 	google.golang.org/grpc v1.43.0
@@ -14,10 +16,14 @@ require (
 	github.com/koneu/natend v0.0.0-20150829182554-ec0926ea948d // indirect
 	github.com/mdlayher/netlink v1.4.2 // indirect
 	github.com/mdlayher/socket v0.0.0-20211102153432-57e3fa563ecb // indirect
+	go4.org/intern v0.0.0-20210108033219-3eb7198706b2 // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20201222180813-1025295fd063 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/tools v0.1.8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
+	inet.af/netaddr v0.0.0-20210515010201-ad03edc7c841 // indirect
+	inet.af/wf v0.0.0-20211204062712-86aaea0a7310 // indirect
 )
 
 require (

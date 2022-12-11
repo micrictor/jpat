@@ -118,6 +118,10 @@ func New(reader io.Reader) *AppConfig {
 		log.Fatalf("Failed to parse config: %s", err.Error())
 	}
 
+	if result.Service.Host == "" || result.Service.Port == 0 || result.Service.Ttl == 0 {
+		log.Fatalf("Config service definition is invalid: %v", result.Service)
+	}
+
 	config = result
 	return config
 }

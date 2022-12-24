@@ -13,4 +13,18 @@ type Rule struct {
 	Expiration  uint64
 }
 
-var activeRules []Rule
+type Term struct {
+	Comment         string
+	SourceAddr      net.IP
+	SourcePort      uint16
+	DestinationAddr net.IP
+	DestinationPort uint16
+	Protocol        string
+	Expiration      int64
+}
+
+type Policy struct {
+	Platform string
+	Comment  string
+	Terms    []Term
+}

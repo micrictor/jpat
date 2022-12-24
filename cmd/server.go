@@ -27,10 +27,13 @@ var serverCmd = &cobra.Command{
 	},
 }
 
+var engine *rules.RulesEngine
+
 const DIAL_TIMEOUT = 5 * 1000000000 // 5 second timeout
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
+	engine = rules.New()
 
 	serverCmd.PersistentFlags().IPP("listenAddr", "a", net.IPv4zero, "The address to listen on.")
 	serverCmd.PersistentFlags().IntP("listenPort", "p", 1337, "The UDP port to listen on.")
@@ -63,12 +66,12 @@ func serverMain(cmd *cobra.Command) {
 	log.Printf("Listening on %s", conn.LocalAddr().String())
 
 	defer conn.Close()
-	defer rules.Close()
+	defer engine.Close()
 	interruptChannel := make(chan os.Signal)
 	signal.Notify(interruptChannel, os.Interrupt)
 	go func() {
 		<-interruptChannel
-		rules.Close()
+		engine.Close()
 		os.Exit(1)
 	}()
 
@@ -97,9 +100,10 @@ func processPacket(addr *net.UDPAddr, buffer []byte, appConfig *config.AppConfig
 		log.Printf("token processing failed: %v", err)
 		return
 	}
-	matchedRule, err := rules.GetRule(addr, inputToken, appConfig)
+
+	expiration, err := engine.TryAddTerm(addr, inputToken, appConfig)
 	if err != nil {
-		log.Printf("rule matching failed: %v", err)
+		log.Printf("failed to validate token: %v", err)
 		return
 	}
 
@@ -110,15 +114,10 @@ func processPacket(addr *net.UDPAddr, buffer []byte, appConfig *config.AppConfig
 	sb.WriteString(fmt.Sprintf("%d", appConfig.Service.Port))
 	reply := pb.AuthReply{
 		Socket:     sb.String(),
-		Expiration: int64(matchedRule.Expiration),
+		Expiration: expiration,
 	}
 	replyChan := make(chan (error))
 	go sendReply(reply, addr, replyChan)
-
-	if err := rules.ApplyRule(matchedRule); err != nil {
-		log.Printf("Error applying rule: %v", err)
-		return
-	}
 
 	replyErr := <-replyChan
 	if replyErr != nil {

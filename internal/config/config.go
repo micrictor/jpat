@@ -15,9 +15,10 @@ import (
 const DEFAULT_TTL = 60
 
 type ServiceConfig struct {
-	Port uint16 `yaml:"port"`
-	Host string `yaml:"host"`
-	Ttl  int64  `yaml:"ttl,omitempty"`
+	Port     uint16 `yaml:"port"`
+	Host     string `yaml:"host"`
+	Protocol string `yaml:"protocol"`
+	Ttl      int64  `yaml:"ttl,omitempty"`
 }
 
 type JwtAlgorithm struct {
@@ -120,6 +121,9 @@ func New(reader io.Reader) *AppConfig {
 
 	if result.Service.Host == "" || result.Service.Port == 0 || result.Service.Ttl == 0 {
 		log.Fatalf("Config service definition is invalid: %v", result.Service)
+	}
+	if result.Service.Protocol == "" {
+		result.Service.Protocol = "tcp"
 	}
 
 	config = result

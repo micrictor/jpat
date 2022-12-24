@@ -5,6 +5,7 @@ service:
   host: 127.0.0.1
   port: 1337
   ttl: 60
+  protocol: "udp"
 verification:
   algo: hs256
   secret: secretstring

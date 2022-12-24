@@ -12,11 +12,7 @@ import (
 	"inet.af/wf"
 )
 
-func Close() {
-
-}
-
-func ApplyRule(rule Rule) error {
+func (r *RulesEngine) ApplyTerm(term Term) error {
 	session, err := wf.New(&wf.Options{
 		Name:        "jpat",
 		Description: "JPAT SPA",
@@ -34,30 +30,29 @@ func ApplyRule(rule Rule) error {
 		}
 	}
 
-	wfRule := convertRule(rule)
+	wfRule := convertTerm(term)
 
 	if err := session.AddRule(&wfRule); err != nil {
 		return err
 	}
-	go scheduleRuleDeletion(rule, wfRule.ID)
 	return nil
 }
 
-func convertRule(rule Rule) wf.Rule {
+func convertTerm(term Term) wf.Rule {
 	ruleGuid, err := windows.GenerateGUID()
 	if err != nil {
 		log.Printf("Failed to create GUID for new rule: %v", err)
 		return wf.Rule{}
 	}
 
-	convertedSource, _ := netaddr.FromStdIP(rule.Source.IP)
+	convertedSource, _ := netaddr.FromStdIP(term.SourceAddr)
 	sublayer, _ := windows.GUIDFromString("{B3CDD441-AF90-41BA-A745-7C6008FF2301}")
 
 	return wf.Rule{
 		ID:          wf.RuleID(ruleGuid),
 		KernelID:    4,
-		Name:        fmt.Sprintf("JPAT Rule for %s", rule.Source.IP.String()),
-		Description: fmt.Sprintf("JPAT Rule for %s", rule.Source.IP.String()),
+		Name:        fmt.Sprintf("JPAT Rule for %s", term.SourceAddr.String()),
+		Description: fmt.Sprintf("JPAT: %v", term.Comment),
 		Layer:       wf.LayerALEAuthRecvAcceptV4,
 		Sublayer:    wf.SublayerID(sublayer),
 		Weight:      1,
@@ -71,7 +66,7 @@ func convertRule(rule Rule) wf.Rule {
 			&wf.Match{
 				Field: wf.FieldIPLocalPort,
 				Op:    wf.MatchTypeEqual,
-				Value: rule.Destination.Port,
+				Value: term.DestinationPort,
 			},
 		},
 	}
